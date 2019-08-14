@@ -94,13 +94,6 @@ class FetchStreamLoader extends BaseLoader {
             referrerPolicy: 'no-referrer-when-downgrade'
         };
 
-        // add additional headers
-        if (typeof this._config.headers === 'object') {
-            for (let key in this._config.headers) {
-                headers.append(key, this._config.headers[key]);
-            }
-        }
-
         // cors is enabled by default
         if (dataSource.cors === false) {
             // no-cors means 'disregard cors policy', which can only be used in ServiceWorker
@@ -115,12 +108,6 @@ class FetchStreamLoader extends BaseLoader {
         // referrerPolicy from config
         if (dataSource.referrerPolicy) {
             params.referrerPolicy = dataSource.referrerPolicy;
-        }
-
-        // add abort controller, by wmlgl 2019-5-10 12:21:27
-        if (self.AbortController) {
-            this._abortController = new self.AbortController();
-            params.signal = this._abortController.signal;     
         }
 
         this._status = LoaderStatus.kConnecting;
@@ -158,10 +145,6 @@ class FetchStreamLoader extends BaseLoader {
                 }
             }
         }).catch((e) => {
-            if (this._abortController && this._abortController.signal.aborted) {
-                return;
-            }
-
             this._status = LoaderStatus.kError;
             if (this._onError) {
                 this._onError(LoaderErrors.EXCEPTION, {code: -1, msg: e.message});
@@ -173,10 +156,6 @@ class FetchStreamLoader extends BaseLoader {
 
     abort() {
         this._requestAbort = true;
-
-        if (this._abortController) {
-            this._abortController.abort();
-        }
     }
 
     _pump(reader) {  // ReadableStreamReader

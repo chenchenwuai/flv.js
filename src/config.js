@@ -45,7 +45,6 @@ export const defaultConfig = {
     reuseRedirectedURL: false,
     // referrerPolicy: leave as unspecified
 
-    headers: undefined,
     customLoader: undefined
 };
 
