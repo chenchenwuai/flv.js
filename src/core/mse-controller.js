@@ -340,6 +340,13 @@ class MSEController {
     }
 
     _doCleanupSourceBuffer() {
+
+        // create by chenwuai 2019/08/16
+        // Temporarily fix the issue of Firefox automatically remove arraybuffer causing video pauses
+        if (Browser.firefox) {
+            return;
+        }
+
         let currentTime = this._mediaElement.currentTime;
 
         for (let type in this._sourceBuffers) {
