@@ -134,8 +134,15 @@ class FetchStreamLoader extends BaseLoader {
                         }
                     }
                 }
-
-                return this._pump.call(this, res.body.getReader());
+                // create by chenwuai 2019/08/16
+                // Fix the issue of streams continues download after being destroyed player in firefox browser.
+                if (Browser.firefox) {
+                    this.reader = res.body.getReader();
+                    return this._pump.call(this, this.reader);
+                } else {
+                    return this._pump.call(this, res.body.getReader());
+                }
+                
             } else {
                 this._status = LoaderStatus.kError;
                 if (this._onError) {
@@ -156,6 +163,11 @@ class FetchStreamLoader extends BaseLoader {
 
     abort() {
         this._requestAbort = true;
+        // create by chenwuai 2019/08/16
+        // Fix the issue of streams continues download after being destroyed player in firefox browser.
+        if (this.reader && this.reader.cancel) {
+            this.reader.cancel();
+        }
     }
 
     _pump(reader) {  // ReadableStreamReader
