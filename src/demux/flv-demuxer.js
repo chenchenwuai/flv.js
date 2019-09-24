@@ -756,7 +756,7 @@ class FLVDemuxer {
             return;
         }
 
-        // AAC
+        // MP3
         // 如果设置了有视频，但是等待了 this.audioDataTagMaxNumWaitingForVideoData 帧后还是没有视频数据过来，认定没有视频。
         if (!this.getFirstVideoTag) {
             if (this.getAudioDataTagNum >= this.audioDataTagMaxNumWaitingForVideoData) {
