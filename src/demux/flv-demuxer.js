@@ -111,6 +111,13 @@ class FLVDemuxer {
             (new DataView(buf)).setInt16(0, 256, true);  // little-endian write
             return (new Int16Array(buf))[0] === 256;  // platform-spec read, if equal then LE
         })();
+        this.getFirstAudioTag = false;
+        this.getAudioDataTagNum = 0;
+        this.audioDataTagMaxNumWaitingForVideoData = this._config.audioDataTagMaxNumWaitingForVideoData || 15;
+
+        this.getFirstVideoTag = false;
+        this.getVideoDataTagNum = 0;
+        this.videoDataTagMaxNumWaitingForAudioData = this._config.videoDataTagMaxNumWaitingForAudioData || 15;
     }
 
     destroy() {
@@ -463,6 +470,10 @@ class FLVDemuxer {
             return;
         }
 
+        if (!this.getFirstAudioTag) {
+            this.getFirstAudioTag = true; // 获取到了第一个音频tag
+        }
+
         let le = this._littleEndian;
         let v = new DataView(arrayBuffer, dataOffset, dataSize);
 
@@ -613,6 +624,17 @@ class FLVDemuxer {
             return;
         }
 
+        // AAC
+        // 如果设置了有视频，但是等待了 this.audioDataTagMaxNumWaitingForVideoData 帧后还是没有视频数据过来，认定没有视频。
+        if (!this.getFirstVideoTag) {
+            if (this.getAudioDataTagNum >= this.audioDataTagMaxNumWaitingForVideoData) {
+                this._hasVideo = false;
+                this.getFirstVideoTag = true;
+            } else {
+                this.getAudioDataTagNum++;
+            }
+        }
+
         let result = {};
         let array = new Uint8Array(arrayBuffer, dataOffset, dataSize);
 
@@ -734,6 +756,17 @@ class FLVDemuxer {
             return;
         }
 
+        // AAC
+        // 如果设置了有视频，但是等待了 this.audioDataTagMaxNumWaitingForVideoData 帧后还是没有视频数据过来，认定没有视频。
+        if (!this.getFirstVideoTag) {
+            if (this.getAudioDataTagNum >= this.audioDataTagMaxNumWaitingForVideoData) {
+                this._hasVideo = false;
+                this.getFirstVideoTag = true;
+            } else {
+                this.getAudioDataTagNum++;
+            }
+        }
+
         let le = this._littleEndian;
         let array = new Uint8Array(arrayBuffer, dataOffset, dataSize);
         let result = null;
@@ -814,6 +847,10 @@ class FLVDemuxer {
             // If hasVideo: false indicated explicitly in MediaDataSource,
             // Ignore all the video packets
             return;
+        }
+
+        if (!this.getFirstVideoTag) {
+            this.getFirstVideoTag = true; // 获取到了第一个视频tag
         }
 
         let spec = (new Uint8Array(arrayBuffer, dataOffset, dataSize))[0];
@@ -1023,6 +1060,16 @@ class FLVDemuxer {
     }
 
     _parseAVCVideoData(arrayBuffer, dataOffset, dataSize, tagTimestamp, tagPosition, frameType, cts) {
+        // 针对服务器无法确定是有有音频，但是配置里面设置了有音频，如果等待了 this.videoDataTagMaxNumWaitingForAudioData 帧后还是没有音频数据过来，认定没有音频。
+        if (!this.getFirstAudioTag) {
+            if (this.getVideoDataTagNum >= this.videoDataTagMaxNumWaitingForAudioData) {
+                this._hasAudio = false;
+                this.getFirstAudioTag = true;
+            } else {
+                this.getVideoDataTagNum++;
+            }
+        }
+
         let le = this._littleEndian;
         let v = new DataView(arrayBuffer, dataOffset, dataSize);
 
